@@ -1,6 +1,6 @@
 import re
 from urllib.parse import urlparse
-
+# https://en.wikipedia.org/wiki/SimHash use for comparing page similarity
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
