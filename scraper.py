@@ -20,11 +20,11 @@ def extract_next_links(url, resp):
     link_set = set()
 
 
-    if (resp.raw_response == None) and (resp.error != None) or (400 <= resp.status <= 499): return link_set
+    if (resp.error != None) or (400 <= resp.status <= 499) and (resp.raw_response == None): return link_set
 
     #page = requests.get(url)
     #print(resp.raw_response.text)
-    if not resp.raw_response: return link_set
+    #if not resp.raw_response: return link_set
     soup = BeautifulSoup(resp.raw_response.text, features="lxml")
     page_text = soup.text   # html doc stripped of html tags
 
@@ -79,8 +79,8 @@ def extract_next_links(url, resp):
 
             link = link.split("#")[0]  # Defrag the url
 
-            # If url query is more than 50 characters, skip it
-            #if url.rsplit('/'.)
+            # Remove the query param(s) from url
+            link = link[:link.find('?')]
 
             #print(url.strip())
             link_set.add(link.lstrip().strip())
@@ -115,7 +115,7 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
-            + r"|pdf|js)$", parsed.path.lower())
+            + r"|pdf|js|ppsx)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
