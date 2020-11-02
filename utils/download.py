@@ -11,6 +11,8 @@ def download(url, config, logger=None):
         params=[("q", f"{url}"), ("u", f"{config.user_agent}")])
     if resp:
         return Response(cbor.loads(resp.content))
+    except EOFError:
+            return Response({"url": "", "status": 404, "error": ""})
     logger.error(f"Spacetime Response error {resp} with url {url}.")
     return Response({
         "error": f"Spacetime Response error {resp} with url {url}.",
