@@ -1,9 +1,11 @@
 import re
+import urllib.parse
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 import json
 import requests
+from tokenizer import *
 
 
 
@@ -19,11 +21,15 @@ def extract_next_links(url, resp):
 
     if (resp.error != None) or (400 <= resp.status <= 499): return link_set
 
-    print(f"{url}\n\t{resp.url}")
+    #page = requests.get(url)
+    #print(resp.raw_response.text)
+    if not resp.raw_response: return link_set
+    soup = BeautifulSoup(resp.raw_response.text, features="lxml")
+    page_text = soup.text   # html doc stripped of html tags
 
-    page = requests.get(url)
-
-    soup = BeautifulSoup(page.text, features="html.parser")
+    # Tokenize page_text and if len(token_list) does not reach a certain threshold, skip page
+    if len(tokenize(page_text)) < 200: return link_set
+    print(len(tokenize(page_text)))
 
     ### FIND A WAY TO STRIP HTML DOC OF HTML MARKUPS AND TOKENIZE WORDS GATHERED IN DICT W/ WORD COUNT IN DOC ###
     ### WILL EVENTUALLY ENCOMPASS TOKENS/WORDS FROM ENTIRE SET OF PAGES ###
@@ -42,15 +48,25 @@ def extract_next_links(url, resp):
             #if url does not begin with '/' (e.g. something.html), append it to the end of the url path
 
             """
-            filter tricks????:
+            filter tips????:
                 - Split the url by '/' and see how many elements of the path are solely numbers.
                   The urls with more than one will most likely be a trap, so discard it.
                 - Avoid excessively long urls (or maybe just really long queries)
+                - Avoid paths containing 4-digits paths (e.g. .../2017/something.html)
+                - Avoid path w/ pdf in path (e.g., .../pdf/InformaticsBrochure)
+                - Avoid urls w/ parameters
             
             - Defrag the url (remove the fragment part)
             """
 
-            print(url.strip())
+            url = url.split("#")[0]  # Defrag the url
+
+            # If url query is more than 50 characters, skip it
+            #if url.rsplit('/'.)
+
+            # If "calendar", "repond", "comments", ... in url path, skip it
+
+            #print(url.strip())
             link_set.add(url.lstrip().strip())
 
     return link_set
@@ -63,7 +79,7 @@ def is_valid(url):
 
         # Check against 
         is_valid_domain = False
-        for domain in {"ics.uci.edu", ".ics.uci.edu", "cs.uci.edu", ".cs.uci.edu", "informatics.uci.edu","stat.uci.edu", "today.uci.edu/department/information_computer_sciences/"}:
+        for domain in {".ics.uci.edu", ".cs.uci.edu", "informatics.uci.edu","stat.uci.edu", "today.uci.edu/department/information_computer_sciences/"}:
             if domain in url:
                 is_valid_domain = True
         if is_valid_domain == False: return False   # Keep going if in valid domain
