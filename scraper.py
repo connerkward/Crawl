@@ -5,50 +5,99 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 import json
-import requests
 import tokenizer
+import ctoken
+import lxml  # required for BS4
+from os import path
+
+# Tokenizer Select
+# TOKENIZER = tokenizer.tokenize
+TOKENIZER = ctoken.tokenize_page
 
 
+def archive(token_list, json_path="data.json") -> dict:
+    """
+    Convert token_list to Word Frequency, save to JSON as {word: count}
+    :return: returns the word_freqs for this token_list
+    """
+    # Generate Word Frequencies
+    word_freqs = ctoken.computeWordFrequencies(token_list)
+    # Write to JSON
+    if path.exists(json_path):
+        with open(json_path, 'r', encoding='utf-8') as file:
+            json_word_freqs = json.load(file)
+            for json_key in json_word_freqs.keys():
+                if json_key in word_freqs.keys():
+                    word_freqs[json_key] += json_word_freqs[json_key]
+                else:
+                    word_freqs[json_key] = 1
+        with open(json_path, 'w', encoding='utf-8') as file:
+            json.dump(word_freqs, file, ensure_ascii=True, indent=4)
+    else:
+        with open(json_path, 'w', encoding='utf-8') as file:
+            json.dump(word_freqs, file, ensure_ascii=True, indent=4)
+    return word_freqs
 
-def scraper(url, resp):
-    links = extract_next_links(url, resp)
+
+def scraper(url, resp) -> list:
+    """
+    Check for bad url or bad response, text and tokenize, update archive word frequency,
+    extract links, log, return links.
+    :return: a list of links
+    """
+    # Check for Bad Response
+    if (resp.error is not None) or (400 <= resp.status <= 499) and (resp.raw_response is None): return []
+    # Check for Bad URL
+    if not is_valid(url): return []
+
+    # Convert to Text-Only
+    parsed_html = BeautifulSoup(resp.raw_response.text, features="lxml")
+    page_text = parsed_html.text
+
+    # Tokenize
+    # TODO: Discuss which tokenizer to use
+    token_list = TOKENIZER(page_text, ignore_stop_words=True)
+
+    # Filter Out Min # of Tokens
+    # TODO: Discuss if there's a better way to estimate
+    if len(token_list) < 200: return []
+
+    # Word Frequency
+    # TODO: Validate
+    archive(token_list)
+
+    # Extract Links
+    # TODO: Validate
+    links = extract_next_links(url, resp, parsed_html)
+
+    # Log
+    with open("./Logs/URL_LOG.txt", "a+") as handle:
+        handle.write(f"{resp.url} {len(token_list)} {len(tokenizer.compute_word_frequency(token_list))} {len(links)}\n")
+
     return [link for link in links if is_valid(link)]
 
-def extract_next_links(url, resp):
-    # Implementation requred.
 
+def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> "list of links":
+    """
+    Extract links from BeautifulSoup object.
+    :param parsed_html: BeautifulSoup object
+    :return: list of links
+    """
     link_set = set()
+    # Removed BeautifulSoup object conversion from here, since it already happens in scraper().
+    # Instead added BeautifulSoup object as parameter to this function.
+    # CONNER: I have not looked at or changed rest of function
 
-
-    if (resp.error != None) or (400 <= resp.status <= 499) and (resp.raw_response == None): return link_set
-
-    #page = requests.get(url)
-    #print(resp.raw_response.text)
-    #if not resp.raw_response: return link_set
-    soup = BeautifulSoup(resp.raw_response.text, features="lxml")
-    page_text = soup.text   # html doc stripped of html tags
-
-
-    # Tokenize page_text and if len(token_list) does not reach a certain threshold, skip page
-    token_list = tokenizer.tokenize(page_text)
-    if len(token_list) < 200: return link_set
-    #print(len(token_list))
-
-    ### FIND A WAY TO STRIP HTML DOC OF HTML MARKUPS AND TOKENIZE WORDS GATHERED IN DICT W/ WORD COUNT IN DOC ###
-    ### WILL EVENTUALLY ENCOMPASS TOKENS/WORDS FROM ENTIRE SET OF PAGES ###
-
-    #with open("./Logs/URL_LOG.txt", "a") as log:
-        
-    # get all urls (currently doesn't account for dynamic webpages)
-    for link in soup.find_all("a"):
+    # (currently doesn't account for dynamic webpages)
+    for link in parsed_html.find_all("a"):
         # Links are often located in either "href" or "src"
-        link = link.get("href")# if link.get("href") != None else link.get("src")
+        link = link.get("href")  # if link.get("href") != None else link.get("src")
 
-        if (link != None) and not(link in ['#', '@']) and ("mailto" not in link):
+        if (link != None) and not (link in ['#', '@']) and ("mailto" not in link):
 
             ### SET ADDITIONAL CHECKS/FILTERS HERE ###
-            #if url begins with '/', discard the path of the url and add the href path
-            #if url does not begin with '/' (e.g. something.html), append it to the end of the url path
+            # if url begins with '/', discard the path of the url and add the href path
+            # if url does not begin with '/' (e.g. something.html), append it to the end of the url path
             link = urljoin(resp.url, link)
 
             """
@@ -74,23 +123,21 @@ def extract_next_links(url, resp):
                         break
 
             if is_trap: continue
-            
-            #print(link.split('/'))
+
+            # print(link.split('/'))
 
             link = link.split("#")[0]  # Defrag the url
 
             # Remove the query param(s) from url
             link = link[:link.find('?')]
 
-            #print(url.strip())
+            # print(url.strip())
             link_set.add(link.lstrip().strip())
-
-    with open("./Logs/URL_LOG.txt", "a+") as handle:
-        handle.write(f"{resp.url} {len(token_list)} {len(tokenizer.compute_word_frequency(token_list))} {len(link_set)}\n")
-
     return link_set
 
+
 def is_valid(url):
+    # CONNER: I have not looked at or changed this function
     try:
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
@@ -98,13 +145,14 @@ def is_valid(url):
 
         # Check against 
         is_valid_domain = False
-        for domain in {".ics.uci.edu", ".cs.uci.edu", "informatics.uci.edu","stat.uci.edu", "today.uci.edu/department/information_computer_sciences/"}:
+        for domain in {".ics.uci.edu", ".cs.uci.edu", "informatics.uci.edu", "stat.uci.edu",
+                       "today.uci.edu/department/information_computer_sciences/"}:
             if domain in url:
                 is_valid_domain = True
-        if is_valid_domain == False: return False   # Keep going if in valid domain
+        if is_valid_domain == False: return False  # Keep going if in valid domain
 
-        #seed_domain_list = ["ics.uci.edu/", "cs.uci.edu", "informatics.uci.edu","stat.uci.edu/", "today.uci.edu/department/information_computer_sciences/"]
-        #if 
+        # seed_domain_list = ["ics.uci.edu/", "cs.uci.edu", "informatics.uci.edu","stat.uci.edu/", "today.uci.edu/department/information_computer_sciences/"]
+        # if
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -118,5 +166,5 @@ def is_valid(url):
             + r"|pdf|js|ppsx)$", parsed.path.lower())
 
     except TypeError:
-        print ("TypeError for ", parsed)
+        print("TypeError for ", parsed)
         raise
