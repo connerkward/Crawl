@@ -13,7 +13,7 @@ from os import path
 # TOKENIZER = tokenizer.tokenize
 TOKENIZER = ctoken.tokenize_page
 
-URL_LENGTH_THRESHOLD = 8  # in blocks of url , usually around 3-5
+URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
 TOKEN_COUNT_THRESHOLD = 200
 
 def archive(token_list, json_path="data.json") -> dict:
@@ -47,23 +47,25 @@ def scraper(url, resp) -> set:
     :return: a list of links
     """
     # Check for Bad Response
-    if (resp.error is not None) or (400 <= resp.status <= 499) and (resp.raw_response is None): return []
+    if (resp.error is not None) or (400 <= resp.status <= 599) and (resp.raw_response is None): return []
     # Check for Bad URL
-    #if not is_valid(url): return []
+    if not is_valid(url): return []
 
     # Convert to Text-Only
     parsed_html = BeautifulSoup(resp.raw_response.text, features="lxml")
 
     # Tokenize
     # TODO: Discuss which tokenizer to use
-    #token_list = TOKENIZER(parsed_html.text, ignore_stop_words=True)
+    token_list = TOKENIZER(parsed_html.text, ignore_stop_words=True)
     # Filter Out Min # of Tokens
     # TODO: Discuss if there's a better way to estimate
-    #if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
+    # if len(token_list) < TOKEN_COUNT_THRESHOLD:
+    #     print(token_list)
+    if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
 
     # Word Frequency
     # TODO: Validate
-    # archive(token_list)
+    archive(token_list)
 
     # Extract Links
     # TODO: Validate
@@ -82,7 +84,7 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
     # Removed BeautifulSoup object conversion from here, since it already happens in scraper().
     # Instead added BeautifulSoup object as parameter to this function.
 
-    for link in [link.get("href") for link in parsed_html.find_all("a")]:
+    for link in [l.get("href") for l in parsed_html.find_all("a")]:
         # Links are often located in either "href" or "src"
         # link = link.get("href")  # if link.get("href") != None else link.get("src")
 
@@ -91,6 +93,11 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
                 and '@' not in link \
                 and "mailto" not in link \
                 and "img" not in link \
+                and "image" not in link \
+                and "events" not in link \
+                and "event" not in link \
+                and "pdf" not in link \
+                and "calendar" not in link \
                 and is_valid(urljoin(resp.url, link)):
             # if url begins with '/', discard the path of the url and add the href path
             # if url does not begin with '/' (e.g. something.html), append it to the end of the url path (urljoin)
@@ -119,7 +126,8 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
                         is_trap = True
                         break
                     # check for sus keywords
-                    if block in {"calendar", "pdf", "reply", "respond", "comment", "event", "events", "img"}:
+
+                    if block in {"calendar", "pdf", "reply", "respond", "comment", "event", "events", "img", "image"}:
                         is_trap = True
                         break
             if is_trap: continue  # move to next for loop iteration
@@ -154,7 +162,7 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1|mat|thesis"
             + r"|thmx|mso|arff|rtf|jar|csv|apk|war"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|img"
-            + r"|pdf|js|ppsx)$", parsed.path.lower())
+            + r"|pdf|js|ppsx|pps)$", parsed.path.lower())
         # added img, war, apk, mat, thesis
 
     except TypeError:
