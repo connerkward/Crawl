@@ -14,6 +14,7 @@ from os import path
 TOKENIZER = ctoken.tokenize_page
 
 URL_LENGTH_THRESHOLD = 8  # in blocks of url , usually around 3-5
+TOKEN_COUNT_THRESHOLD = 200
 
 def archive(token_list, json_path="data.json") -> dict:
     """
@@ -58,7 +59,7 @@ def scraper(url, resp) -> set:
     #token_list = TOKENIZER(parsed_html.text, ignore_stop_words=True)
     # Filter Out Min # of Tokens
     # TODO: Discuss if there's a better way to estimate
-    #if len(token_list) < 200: return []
+    #if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
 
     # Word Frequency
     # TODO: Validate
@@ -89,6 +90,7 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
         if link is not None \
                 and '@' not in link \
                 and "mailto" not in link \
+                and "img" not in link \
                 and is_valid(urljoin(resp.url, link)):
             # if url begins with '/', discard the path of the url and add the href path
             # if url does not begin with '/' (e.g. something.html), append it to the end of the url path (urljoin)
@@ -150,9 +152,10 @@ def is_valid(url):
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1|mat|thesis"
-            + r"|thmx|mso|arff|rtf|jar|csv|apk"
+            + r"|thmx|mso|arff|rtf|jar|csv|apk|war"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|img"
             + r"|pdf|js|ppsx)$", parsed.path.lower())
+        # added img, war, apk, mat, thesis
 
     except TypeError:
         print("TypeError for ", parsed)
