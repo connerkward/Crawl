@@ -129,10 +129,12 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
 def is_valid(url):
     try:
         parsed = urlparse(url)
+
         # scheme check
         if parsed.scheme not in set(["http", "https"]):
             return False
 
+        # valid domain check
         is_valid_domain = False
         for domain in {".ics.uci.edu", ".cs.uci.edu", "informatics.uci.edu", "stat.uci.edu",
                        "today.uci.edu/department/information_computer_sciences/"}:
@@ -140,7 +142,7 @@ def is_valid(url):
                 is_valid_domain = True
         if is_valid_domain == False: return False  # Keep going if in valid domain
 
-        # Check file types
+        # file extension check
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
