@@ -104,6 +104,7 @@ def outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
     else:
         return {}
 
+
 if __name__ == "__main__":
     print("block max:", compute_optimal_block_maximum())
     print("token min:", compute_optimal_token_minimum())
