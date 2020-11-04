@@ -102,8 +102,13 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
                     if (len(block) == 4) and (block.isdigit()):
                         is_trap = True
                         break
+                    
+                    # check for repetitive blocks
+                    if link.count(block) > 1:
+                        is_trap = True
+                        break
+                    
                     # check for sus keywords
-
                     if block in {"calendar", "pdf", "reply", "respond", "comment", "event", "events", "img", "image"}:
                         is_trap = True
                         break
