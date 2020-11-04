@@ -6,7 +6,7 @@ from utils.config import Config
 from crawler import Crawler
 import os
 
-DELETE_DATA_FILES = True # set this to false if you want to stop program and keep previous data
+DELETE_DATA_FILES = False # set this to false if you want to stop program and keep previous data
 DELETE_LOG_FILES = True  # set to false if you want to keep previous url log file
 
 DATA_FILES = ["data.json", "frontier.shelve.db"]

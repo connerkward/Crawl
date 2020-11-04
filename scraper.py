@@ -9,6 +9,7 @@ import ctoken
 import lxml  # required for BS4
 from os import path
 import json_utils
+import threading
 
 # Tokenizer Select
 # TOKENIZER = tokenizer.tokenize
@@ -36,13 +37,13 @@ def scraper(url, resp) -> set:
     token_list = TOKENIZER(parsed_html.text, ignore_stop_words=True)
     # Filter Out Min # of Tokens
     # TODO: Discuss if there's a better way to estimate
-    # if len(token_list) < TOKEN_COUNT_THRESHOLD:
-    #     print(token_list)
+    if len(token_list) < TOKEN_COUNT_THRESHOLD:
+        print(token_list)
     if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
 
     # Word Frequency
     # TODO: Validate
-    json_utils.archive_to_json(url, token_list)
+    threading.Thread(target=json_utils.archive_to_json, args=(url, token_list)).start()
 
     # Extract Links
     # TODO: Validate
