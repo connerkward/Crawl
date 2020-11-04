@@ -8,37 +8,14 @@ import tokenizer
 import ctoken
 import lxml  # required for BS4
 from os import path
+import json_utils
 
 # Tokenizer Select
 # TOKENIZER = tokenizer.tokenize
 TOKENIZER = ctoken.tokenize_page
 
-URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
-TOKEN_COUNT_THRESHOLD = 200
-
-def archive(token_list, json_path="data.json") -> dict:
-    """
-    Convert token_list to Word Frequency, save to JSON as {word: count}
-    :return: returns the word_freqs for this token_list
-    """
-    # Generate Word Frequencies
-    word_freqs = ctoken.computeWordFrequencies(token_list)
-    # Write to JSON
-    if path.exists(json_path):
-        with open(json_path, 'r', encoding='utf-8') as file:
-            json_word_freqs = json.load(file)
-            for json_key in json_word_freqs.keys():
-                if json_key in word_freqs.keys():
-                    word_freqs[json_key] += json_word_freqs[json_key]
-                else:
-                    word_freqs[json_key] = 1
-        with open(json_path, 'w', encoding='utf-8') as file:
-            json.dump(word_freqs, file, ensure_ascii=True, indent=4)
-    else:
-        with open(json_path, 'w', encoding='utf-8') as file:
-            json.dump(word_freqs, file, ensure_ascii=True, indent=4)
-    return word_freqs
-
+URL_LENGTH_THRESHOLD = 100  # in blocks of url , usually around 3-5, 8
+TOKEN_COUNT_THRESHOLD = 0
 
 def scraper(url, resp) -> set:
     """
@@ -65,7 +42,7 @@ def scraper(url, resp) -> set:
 
     # Word Frequency
     # TODO: Validate
-    archive(token_list)
+    json_utils.archive_to_json(url, token_list)
 
     # Extract Links
     # TODO: Validate
@@ -163,7 +140,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv|apk|war"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|img"
             + r"|pdf|js|ppsx|pps)$", parsed.path.lower())
-        # added img, war, apk, mat, thesis
+        # added img, war, apk, mat, thesis, pps
 
     except TypeError:
         print("TypeError for ", parsed)

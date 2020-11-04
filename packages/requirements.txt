@@ -1,2 +1,6 @@
 cbor
 requests
+numpy
+bs4
+lxml
+nltk
