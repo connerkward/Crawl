@@ -145,8 +145,8 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1|mat|thesis"
             + r"|thmx|mso|arff|rtf|jar|csv|apk|war"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|img"
-            + r"|pdf|js|ppsx|pps)$", parsed.path.lower())
-        # added img, war, apk, mat, thesis, pps
+            + r"|py|ppsx|pps)$", parsed.path.lower())
+        # added img, war, apk, mat, thesis, pps, py
 
     except TypeError:
         print("TypeError for ", parsed)

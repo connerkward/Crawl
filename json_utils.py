@@ -4,6 +4,7 @@ import json
 import numpy as np
 from matplotlib import pyplot as plt
 
+
 DEFAULT_JSON_PATH = "data.json"
 
 def archive_to_json(url, token_list, json_path=DEFAULT_JSON_PATH) -> dict:
@@ -68,18 +69,16 @@ def compute_quartiles(counts_dict):
     return q1, q3
 
 
-def compute_optimal_block_maximum(json_path=DEFAULT_JSON_PATH) -> int:
+def compute_optimal_block_maximum(block_counts) -> int:
     """Returns upper threshold for outlier blocks"""
-    block_counts = block_lengths_dict(json_path)  # {url: block length}
     q1, q3 = compute_quartiles(block_counts)
     iqr = q3 - q1
     high_threshold = q3 + 1.5 * iqr
     return high_threshold
 
 
-def compute_optimal_token_minimum(json_path=DEFAULT_JSON_PATH) -> int:
+def compute_optimal_token_minimum(token_counts) -> int:
     """Returns lower threshold for outlier tokens"""
-    token_counts = token_count_dict(json_path)  # {url: token_count}
     q1, q3 = compute_quartiles(token_counts)
     iqr = q3 - q1
     low_threshold = q1 - 1.5 * iqr
@@ -93,17 +92,16 @@ def token_outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
     iqr = q3 - q1
     high_threshold = q3 + 1.5 * iqr
     low_threshold = q1 - 1.5 * iqr
-    #print("token outlier thresholds: ", low_threshold, high_threshold)
 
     if high and low:
         return {url: token_counts[url] for url in token_counts.keys()
                 if not low_threshold < token_counts[url] < high_threshold}
     elif high:
         return {url: token_counts[url] for url in token_counts.keys()
-                if not token_counts[url] > high_threshold}
+                if not token_counts[url] < high_threshold}
     elif low:
         return {url: token_counts[url] for url in token_counts.keys()
-                if not token_counts[url] < low_threshold}
+                if not low_threshold < token_counts[url]}
     else:
         return {}
 
@@ -112,66 +110,65 @@ def block_outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
     block_counts = block_lengths_dict(json_path)  # {url: token_count}
     q1, q3 = compute_quartiles(block_counts)
     iqr = q3 - q1
-    high_threshold = q3 + 1.5 * iqr
-    low_threshold = q1 - 1.5 * iqr
+    multi = 1.5
+    high_threshold = q3 + multi * iqr
+    low_threshold = q1 - multi * iqr
     #print("block outlier thresholds: ", low_threshold, high_threshold)
     if high and low:
         return {url: block_counts[url] for url in block_counts.keys()
                 if not low_threshold < block_counts[url] < high_threshold}
     elif high:
         return {url: block_counts[url] for url in block_counts.keys()
-                if not block_counts[url] > high_threshold}
+                if not block_counts[url] < high_threshold}
     elif low:
         return {url: block_counts[url] for url in block_counts.keys()
-                if not block_counts[url] < low_threshold}
+                if not low_threshold < block_counts[url]}
     else:
         return {}
 
 
 if __name__ == "__main__":
+    URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
+    TOKEN_COUNT_THRESHOLD = 204 # minimum token count
+    print("token lower bound:", TOKEN_COUNT_THRESHOLD)
+    print("block upper bound:", URL_LENGTH_THRESHOLD)
     t_dict = token_count_dict()
-    t_outliers = token_outliers()
+    t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
+    t_outliers = token_outliers(low=False, high=False)
+    print("original total:", str(len(t_dict)))
+    print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
 
     b_dict = block_lengths_dict()
-    b_outliers = block_outliers()
+    b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
+    b_outliers = block_outliers(low=False, high=False)
+    print("removed via blocks thresh:", str(len(b_dict) - len(b_dict_threshed)))
 
-    print("token quartiles:", compute_quartiles(token_count_dict()))
-    print("block quartiles:", compute_quartiles(block_lengths_dict()))
+    merge = {key: (b_dict_threshed[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
+                    if key not in b_outliers or key not in t_outliers}
+    #print("removed via previous filters and outliers:", str(len(t_dict) - len(merge)))
+    print("new total:", str(len(merge)))
 
-    # token_count_dict with outliers removed
-    #x = {key: int(t_dict[key]) for key in t_dict if key not in t_outliers}
-    # token_count_dict with outliers removed
-    #y = {key: int(b_dict[key]) for key in b_dict if key not in b_outliers}
-    # print("token quartiles w/ outliers removed:", compute_quartiles(x))
-    # print("block quartiles w/ outliers removed:", compute_quartiles(y))
-
-    x = t_dict
-    y = b_dict
-    print(len(t_dict))
-    print(len(b_dict))
-    merge = {key: (y[key], x[key]) for key in x.keys()
-                    if key not in block_outliers() and key not in token_outliers()}
-    print(merge)
-    # token_count_dict with outliers removed
-    #x = {key: int(t_dict[key]) for key in t_dict if key not in t_outliers}
-    # token_count_dict with outliers removed
-    #y = {key: int(b_dict[key]) for key in b_dict if key not in b_outliers}
-
-    # t_mean = np.mean(list(x.values()))
-    # b_mean = np.mean(list(y.values()))
-    # print(f"token mean: {t_mean}")
-    # print(f"block mean: {b_mean}")
+    token_dict_no_outliers = {key: merge[key][1] for key in merge.keys()}
+    block_dict_no_outliers = {key: merge[key][0] for key in merge.keys()}
 
     plt.xlabel("tokens")
-    plt.boxplot([i[1] for i in merge], vert=False)
+    plt.boxplot([merge[key][1] for key in sorted(merge.keys())], vert=False)
     plt.savefig("token-boxplot.jpg")
     plt.close()
     plt.xlabel("blocks")
-    plt.boxplot([i[0] for i in merge],vert=False)
+    plt.boxplot([merge[key][0] for key in sorted(merge.keys())],vert=False)
     plt.savefig("blocks-boxplot.jpg")
     plt.close()
-    #plt.ylabel("token length")
-    #plt.xlabel("block length")
-    #plt.bar([i[0] for i in merge], [i[1] for i in merge])
-    #plt.savefig("token-block-scatter.jpg")
-    #plt.close()
+    plt.ylabel("token length")
+    plt.xlabel("block length")
+    x = [merge[key][1] for key in sorted(merge.keys())]
+    y = [merge[key][0] for key in sorted(merge.keys())]
+    plt.scatter(y, x)
+    plt.savefig("token-block-scatter.jpg")
+    plt.close()
+    plt.xlabel("block length")
+    plt.ylabel("count")
+    plt.hist(y)
+    #plt.xscale("log")
+    plt.savefig("token-block-box.jpg")
+    plt.close()
