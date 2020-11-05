@@ -9,7 +9,6 @@ import ctoken
 import lxml  # required for BS4
 from os import path
 import json_utils
-import threading
 
 # Tokenizer Select
 # TOKENIZER = tokenizer.tokenize
@@ -43,7 +42,7 @@ def scraper(url, resp) -> set:
 
     # Word Frequency
     # TODO: Validate
-    json_utils.archive_to_json(url, token_list)
+    json_utils.archive_json_lines(url, token_list)
 
     # Extract Links
     # TODO: Validate

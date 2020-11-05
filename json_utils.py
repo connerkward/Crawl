@@ -3,9 +3,15 @@ from os import path
 import json
 import numpy as np
 from matplotlib import pyplot as plt
-
+import json_lines
 
 DEFAULT_JSON_PATH = "data.json"
+
+def archive_json_lines(url, token_list, jsonline_path=DEFAULT_JSON_PATH):
+    word_freqs = ctoken.computeWordFrequencies(token_list)
+    with open(jsonline_path, "a", encoding='utf-8') as f:
+        json_record = json.dumps({url: word_freqs}, ensure_ascii=False)
+        f.write(json_record + '\n')
 
 def archive_to_json(url, token_list, json_path=DEFAULT_JSON_PATH) -> dict:
     """
@@ -43,20 +49,22 @@ def compute_token_count(token_dict):
 def token_count_dict(json_path=DEFAULT_JSON_PATH) -> dict:
     """Computes token counts for entire json file, returns {url: token_count}"""
     token_counts = {}  # {url: token_count}
-    with open(json_path, 'r', encoding='utf-8') as file:
-        json_dict = json.load(file)
-        for url in json_dict.keys():
-            token_counts[url] = compute_token_count(json_dict[url])
+    with open(DEFAULT_JSON_PATH, 'rb') as f:
+        for line in json_lines.reader(f):
+            json_dict = line
+            for url in json_dict.keys():
+                token_counts[url] = compute_token_count(json_dict[url])
     return token_counts
 
 
 def block_lengths_dict(json_path=DEFAULT_JSON_PATH) -> dict:
     """Computes token counts for entire json file, returns {url: token_count}"""
     block_lengths = {}  # {url: token_count}
-    with open(json_path, 'r', encoding='utf-8') as file:
-        json_dict = json.load(file)
-        for url in json_dict.keys():
-            block_lengths[url] = len([i for i in url.split('/') if i])
+    with open(DEFAULT_JSON_PATH, 'rb') as f:
+        for line in json_lines.reader(f):
+            json_dict = line
+            for url in json_dict.keys():
+                block_lengths[url] = len([i for i in url.split('/') if i])
     return block_lengths
 
 
@@ -128,28 +136,42 @@ def block_outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
 
 
 if __name__ == "__main__":
-    URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
-    TOKEN_COUNT_THRESHOLD = 204 # minimum token count
-    print("token lower bound:", TOKEN_COUNT_THRESHOLD)
-    print("block upper bound:", URL_LENGTH_THRESHOLD)
+    URL_LENGTH_THRESHOLD = 13.5  # in blocks of url , usually around 3-5, 8
+    TOKEN_COUNT_THRESHOLD = 359.5 # minimum token count was 204 359
+
     t_dict = token_count_dict()
     t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
-    t_outliers = token_outliers(low=False, high=False)
-    print("original total:", str(len(t_dict)))
-    print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
+    t_outliers = token_outliers(low=True, high=False)
 
     b_dict = block_lengths_dict()
     b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
-    b_outliers = block_outliers(low=False, high=False)
+    b_outliers = block_outliers(low=False, high=True)
+
+    print("token lower threshold:", TOKEN_COUNT_THRESHOLD)
+    print("block upper threshold:", URL_LENGTH_THRESHOLD)
+    print("original total:", str(len(t_dict)))
+    print("Optimals max and min are calculated by outlier equation quartile +/- 1.5 * iqr")
+    print("Pre-filter optimal token min: ", compute_optimal_token_minimum(t_dict))
+    print("Pre-filter optimal block max: ", compute_optimal_block_maximum(b_dict))
+    print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
     print("removed via blocks thresh:", str(len(b_dict) - len(b_dict_threshed)))
 
     merge = {key: (b_dict_threshed[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
-                    if key not in b_outliers or key not in t_outliers}
-    #print("removed via previous filters and outliers:", str(len(t_dict) - len(merge)))
+                    if key not in b_outliers and key not in t_outliers}
+    print("removed via outliers:", str(len(t_outliers) + len(b_outliers)))
     print("new total:", str(len(merge)))
+
 
     token_dict_no_outliers = {key: merge[key][1] for key in merge.keys()}
     block_dict_no_outliers = {key: merge[key][0] for key in merge.keys()}
+    optimal_t = compute_optimal_token_minimum(token_dict_no_outliers)
+    optimal_b = compute_optimal_block_maximum(block_dict_no_outliers)
+    print("Post-filter optimal token min: ", optimal_t)
+    print("Post-filter optimal block max: ", optimal_b)
+    print("original token min: ", min(t_dict.values()))
+    print("original block max: ", max(b_dict.values()))
+    percent = 1 - len(merge)/len(t_dict)
+    print("reduction percentage: ", percent)
 
     plt.xlabel("tokens")
     plt.boxplot([merge[key][1] for key in sorted(merge.keys())], vert=False)
