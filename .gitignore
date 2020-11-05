@@ -108,3 +108,8 @@ venv.bak/
 
 *.full.py
 *.shelve
+
+# database files
+frontier.shelve.db
+data.json
+Logs/URL_LOG.txt

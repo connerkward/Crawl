@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from collections import defaultdict
 import nltk
 from nltk.corpus import stopwords
-nltk.download('stopwords')
+#nltk.download('stopwords')
 import re
 import requests
 import time
