@@ -43,7 +43,7 @@ def scraper(url, resp) -> set:
 
     # Word Frequency
     # TODO: Validate
-    threading.Thread(target=json_utils.archive_to_json, args=(url, token_list)).start()
+    json_utils.archive_to_json(url, token_list)
 
     # Extract Links
     # TODO: Validate
