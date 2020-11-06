@@ -1,6 +1,5 @@
 import re
 import urllib.parse
-s
 from bs4 import BeautifulSoup
 import json
 import tokenizer
