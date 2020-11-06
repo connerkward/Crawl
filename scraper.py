@@ -39,11 +39,9 @@ def scraper(url, resp) -> set:
     if len(token_list) < TOKEN_COUNT_THRESHOLD:
         print(token_list)
     if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
-
     # Word Frequency
     # TODO: Validate
     json_utils.archive_json_lines(url, token_list)
-
     # Extract Links
     # TODO: Validate
     # with open("./Logs/URL_LOG.txt", "a+") as handle:

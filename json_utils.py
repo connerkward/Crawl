@@ -8,7 +8,7 @@ import tldextract
 from collections import defaultdict
 
 DEFAULT_JSON_PATH = "data.json"
-DEFAULT_DOMAIN_URL = "ics.uci.edu"
+DEFAULT_DOMAIN_URL = ".ics.uci.edu"
 
 def archive_json_lines(url, token_list, jsonline_path=DEFAULT_JSON_PATH):
     word_freqs = ctoken.computeWordFrequencies(token_list)
@@ -187,11 +187,10 @@ def subdomain_dict(json_path=DEFAULT_JSON_PATH, domain=DEFAULT_DOMAIN_URL) -> di
                 dom = url.split("/")[2]
                 if domain in dom:
                     subdom = dom.split(".")[0]
-                    if subdom != "www":
-                        if dom in subdomain_pages.keys():
-                            subdomain_pages[dom] += 1
-                        else:
-                            subdomain_pages[dom] = 1
+                    if dom in subdomain_pages.keys():
+                        subdomain_pages[dom] += 1
+                    else:
+                        subdomain_pages[dom] = 1
     return subdomain_pages
 
 def c_subdomain_dict(file=DEFAULT_JSON_PATH):
@@ -204,7 +203,7 @@ def c_subdomain_dict(file=DEFAULT_JSON_PATH):
     return mega
 
 if __name__ == "__main__":
-    file = "Logs/data2.json"
+    file = "Logs/data_17723.json"
     # Question 1
     print("Number of 'Unique' Pages Found: ", len(access_jsonlines_urls(file)))
     print()
