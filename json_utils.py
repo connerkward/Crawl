@@ -40,6 +40,21 @@ def archive_to_json(url, token_list, json_path=DEFAULT_JSON_PATH) -> dict:
             json.dump({url:word_freqs}, file, ensure_ascii=True, indent=4)
     return word_freqs
 
+def common_words(json_path=DEFAULT_JSON_PATH):
+    mega_dict = dict()
+    token_dict_list = list()
+    with open(DEFAULT_JSON_PATH, 'rb') as f:
+        for line in json_lines.reader(f):
+            json_dict = line
+            for url in json_dict.keys():
+                token_dict_list.append(json_dict[url])
+    for dictionary in token_dict_list:
+        for key in dictionary.keys():
+            if key in mega_dict.keys():
+                mega_dict[key] += dictionary[key]
+            else:
+                mega_dict[key] = dictionary[key]
+    return mega_dict
 
 def compute_token_count(token_dict):
     """Computes token count for single token dict"""
@@ -58,7 +73,7 @@ def token_count_dict(json_path=DEFAULT_JSON_PATH) -> dict:
 
 
 def block_lengths_dict(json_path=DEFAULT_JSON_PATH) -> dict:
-    """Computes token counts for entire json file, returns {url: token_count}"""
+    """Computes token counts for entire json lines file, returns {url: token_count}"""
     block_lengths = {}  # {url: token_count}
     with open(DEFAULT_JSON_PATH, 'rb') as f:
         for line in json_lines.reader(f):
@@ -136,16 +151,32 @@ def block_outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
 
 
 if __name__ == "__main__":
-    URL_LENGTH_THRESHOLD = 13.5  # in blocks of url , usually around 3-5, 8
-    TOKEN_COUNT_THRESHOLD = 359.5 # minimum token count was 204 359
+    common_words = common_words()
+    meta_dict = [(item[0], item[1]) for item in sorted(common_words.items(), key=lambda item: item[1], reverse=True)]
 
+    exit()
+    URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
+    TOKEN_COUNT_THRESHOLD = 0 # minimum token count was 204 359
+    trim_valid_outliers = True
     t_dict = token_count_dict()
     t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
-    t_outliers = token_outliers(low=True, high=False)
+    t_outliers = token_outliers(low=True, high=trim_valid_outliers)
 
     b_dict = block_lengths_dict()
     b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
     b_outliers = block_outliers(low=False, high=True)
+
+    plt.ylabel("token length")
+    plt.xlabel("block length")
+    plt.scatter(b_dict.values(), t_dict.values())
+    plt.savefig("token-block-scatter-before.jpg")
+    plt.close()
+    plt.xlabel("block length")
+    plt.ylabel("count")
+    plt.hist(b_dict.values())
+    #plt.xscale("log")
+    plt.savefig("token-block-box-before.jpg")
+    plt.close()
 
     print("token lower threshold:", TOKEN_COUNT_THRESHOLD)
     print("block upper threshold:", URL_LENGTH_THRESHOLD)
@@ -156,7 +187,7 @@ if __name__ == "__main__":
     print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
     print("removed via blocks thresh:", str(len(b_dict) - len(b_dict_threshed)))
 
-    merge = {key: (b_dict_threshed[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
+    merge = {key: (b_dict[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
                     if key not in b_outliers and key not in t_outliers}
     print("removed via outliers:", str(len(t_outliers) + len(b_outliers)))
     print("new total:", str(len(merge)))
@@ -183,6 +214,8 @@ if __name__ == "__main__":
     plt.close()
     plt.ylabel("token length")
     plt.xlabel("block length")
+    if trim_valid_outliers:
+        plt.title("w/o high token count outliers")
     x = [merge[key][1] for key in sorted(merge.keys())]
     y = [merge[key][0] for key in sorted(merge.keys())]
     plt.scatter(y, x)
