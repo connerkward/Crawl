@@ -8,38 +8,14 @@ import tokenizer
 import ctoken
 import lxml  # required for BS4
 from os import path
+import json_utils
 
 # Tokenizer Select
 # TOKENIZER = tokenizer.tokenize
 TOKENIZER = ctoken.tokenize_page
 
-URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
-TOKEN_COUNT_THRESHOLD = 200
-
-def archive(url, token_list, json_path="data.json") -> dict:
-    """
-    Convert token_list to Word Frequency, save to JSON as {url: {word:count}}
-    :return: returns the word_freqs for this token_list
-    """
-    # Generate Word Frequencies
-    word_freqs = ctoken.computeWordFrequencies(token_list)
-    url_word = {url:word_freqs}
-    # Write to JSON
-    if path.exists(json_path):
-        
-        with open(json_path, 'r', encoding='utf-8') as file:
-            json_word_freqs = json.load(file)
-            json_word_freqs[url] = word_freqs
-        
-        
-
-        with open(json_path, 'w', encoding='utf-8') as file:
-            json.dump(json_word_freqs, file, ensure_ascii=True, indent=4)
-    else:
-        with open(json_path, 'w', encoding='utf-8') as file:
-            json.dump(url_word, file, ensure_ascii=True, indent=4)
-    return word_freqs
-
+URL_LENGTH_THRESHOLD = 100  # in blocks of url , usually around 3-5, 8
+TOKEN_COUNT_THRESHOLD = 0
 
 def scraper(url, resp) -> set:
     """
@@ -60,13 +36,13 @@ def scraper(url, resp) -> set:
     token_list = TOKENIZER(parsed_html.text, ignore_stop_words=True)
     # Filter Out Min # of Tokens
     # TODO: Discuss if there's a better way to estimate
-    # if len(token_list) < TOKEN_COUNT_THRESHOLD:
-    #     print(token_list)
+    if len(token_list) < TOKEN_COUNT_THRESHOLD:
+        print(token_list)
     if len(token_list) < TOKEN_COUNT_THRESHOLD: return []
 
     # Word Frequency
     # TODO: Validate
-    archive(url, token_list)
+    json_utils.archive_json_lines(url, token_list)
 
     # Extract Links
     # TODO: Validate
@@ -126,8 +102,13 @@ def extract_next_links(url, resp, parsed_html: BeautifulSoup) -> set:
                     if (len(block) == 4) and (block.isdigit()):
                         is_trap = True
                         break
+                    
+                    # check for repetitive blocks
+                    if link.count(block) > 1:
+                        is_trap = True
+                        break
+                    
                     # check for sus keywords
-
                     if block in {"calendar", "pdf", "reply", "respond", "comment", "event", "events", "img", "image"}:
                         is_trap = True
                         break
@@ -163,8 +144,8 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1|mat|thesis"
             + r"|thmx|mso|arff|rtf|jar|csv|apk|war"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|img"
-            + r"|pdf|js|ppsx|pps)$", parsed.path.lower())
-        # added img, war, apk, mat, thesis
+            + r"|py|ppsx|pps)$", parsed.path.lower())
+        # added img, war, apk, mat, thesis, pps, py
 
     except TypeError:
         print("TypeError for ", parsed)
