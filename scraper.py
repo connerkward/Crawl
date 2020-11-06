@@ -1,5 +1,7 @@
 import re
 import urllib.parse
+from urllib.parse import urlparse
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import json
 import tokenizer
