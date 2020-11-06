@@ -40,14 +40,39 @@ def archive_to_json(url, token_list, json_path=DEFAULT_JSON_PATH) -> dict:
             json.dump({url:word_freqs}, file, ensure_ascii=True, indent=4)
     return word_freqs
 
-def common_words(json_path=DEFAULT_JSON_PATH):
-    mega_dict = dict()
+def access_jsonlines(json_path=DEFAULT_JSON_PATH) -> "list of token dicts":
+    """Returns list of token dicts. {url{word:count}}"""
+    big_dict = dict()
+    with open(json_path, 'rb') as f:
+        for line in json_lines.reader(f):
+            json_dict = line
+            for url in json_dict.keys():
+                big_dict[url] = json_dict[url]
+    return big_dict
+
+def access_jsonlines_tokendicts(json_path=DEFAULT_JSON_PATH) -> "list of token dicts":
+    """Returns list of token dicts. [{word:count}]"""
     token_dict_list = list()
-    with open(DEFAULT_JSON_PATH, 'rb') as f:
+    with open(json_path, 'rb') as f:
         for line in json_lines.reader(f):
             json_dict = line
             for url in json_dict.keys():
                 token_dict_list.append(json_dict[url])
+    return token_dict_list
+
+def access_jsonlines_urls(json_path=DEFAULT_JSON_PATH) -> "list of token dicts":
+    """Returns list of urls. [url]"""
+    token_dict_list = list()
+    with open(json_path, 'rb') as f:
+        for line in json_lines.reader(f):
+            json_dict = line
+            for url in json_dict.keys():
+                token_dict_list.append(url)
+    return token_dict_list
+
+def common_words(json_path=DEFAULT_JSON_PATH):
+    mega_dict = dict()
+    token_dict_list = access_jsonlines(json_path)
     for dictionary in token_dict_list:
         for key in dictionary.keys():
             if key in mega_dict.keys():
@@ -151,20 +176,29 @@ def block_outliers(json_path=DEFAULT_JSON_PATH, high=True, low=True) -> dict:
 
 
 if __name__ == "__main__":
-    common_words = common_words()
-    meta_dict = [(item[0], item[1]) for item in sorted(common_words.items(), key=lambda item: item[1], reverse=True)]
+    token_dict_list = access_jsonlines_tokendicts("Logs/data2.json")
+    highest_token_count = max([sum(token_dict.values()) for token_dict in token_dict_list])
+
+    print(access_jsonlines("Logs/data2.json").keys())
+    print(access_jsonlines_urls("Logs/data2.json"))
 
     exit()
+    common_words = common_words()
+    meta_dict = [(item[0], item[1]) for item in sorted(common_words.items(), key=lambda item: item[1], reverse=True)]
+    print(meta_dict[:50])
+
     URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
     TOKEN_COUNT_THRESHOLD = 0 # minimum token count was 204 359
-    trim_valid_outliers = True
+    trim_valid_outliers = False
     t_dict = token_count_dict()
     t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
     t_outliers = token_outliers(low=True, high=trim_valid_outliers)
 
     b_dict = block_lengths_dict()
     b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
-    b_outliers = block_outliers(low=False, high=True)
+    b_outliers = block_outliers(low=False, high=False)
+
+
 
     plt.ylabel("token length")
     plt.xlabel("block length")
