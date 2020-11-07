@@ -7,7 +7,7 @@ import json_lines
 import tldextract
 from collections import defaultdict
 
-DEFAULT_JSON_PATH = "data.json"
+DEFAULT_JSON_PATH = "Logs/data_17723.json"
 DEFAULT_DOMAIN_URL = ".ics.uci.edu"
 
 def archive_json_lines(url, token_list, jsonline_path=DEFAULT_JSON_PATH):
@@ -203,102 +203,106 @@ def c_subdomain_dict(file=DEFAULT_JSON_PATH):
                 mega[sub[:-4]] += 1
     return mega
 
+def post_charts(merge):
+    plt.xlabel("tokens")
+    plt.boxplot([merge[key][1] for key in sorted(merge.keys())], vert=False)
+    plt.savefig("token-boxplot.jpg")
+    plt.close()
+    plt.xlabel("blocks")
+    plt.boxplot([merge[key][0] for key in sorted(merge.keys())], vert=False)
+    plt.savefig("blocks-boxplot.jpg")
+    plt.close()
+    plt.ylabel("token length")
+    plt.xlabel("block length")
+
+    if trim_valid_outliers:
+        plt.title("w/o high token count outliers")
+    x = [merge[key][1] for key in sorted(merge.keys())]
+    y = [merge[key][0] for key in sorted(merge.keys())]
+    plt.scatter(y, x)
+    plt.savefig("token-block-scatter.jpg")
+    plt.close()
+    plt.xlabel("block length")
+    plt.ylabel("count")
+    plt.hist(y)
+    # plt.xscale("log")
+    plt.savefig("token-block-box.jpg")
+    plt.close()
+
 if __name__ == "__main__":
     file = "Logs/data_17723.json"
-    # Question 1
-    print("Number of 'Unique' Pages Found: ", len(access_jsonlines_urls(file)))
-    print()
+    # # Question 1
+    # print("Number of 'Unique' Pages Found: ", len(access_jsonlines_urls(file)))
+    # print()
+    #
+    # # Question 2
+    # token_dict_list = access_jsonlines_tokendicts(file)
+    # highest_token_count = max([sum(token_dict.values()) for token_dict in token_dict_list])
+    # print(f"Longest page token count: {highest_token_count}")
+    # print()
+    #
+    # # Question 3
+    # common_words = common_words(file)
+    # meta_list = [(item[0], item[1]) for item in sorted(common_words.items(), key=lambda item: item[1], reverse=True)]
+    # print("Top 50 words and counts, by frequency")
+    # [print(f"{i[0]}, {i[1]}") for i in meta_list[:50]]
+    # print()
+    #
+    # # Question 4
+    # mega = c_subdomain_dict(file)
+    # print("Sub domains and counts, alphabetical")
+    # [print(f"{sub}, {mega[sub]}") for sub in sorted(mega.keys())]
 
-    # Question 2
-    token_dict_list = access_jsonlines_tokendicts(file)
-    highest_token_count = max([sum(token_dict.values()) for token_dict in token_dict_list])
-    print(f"Longest page token count: {highest_token_count}")
-    print()
+    URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
+    TOKEN_COUNT_THRESHOLD = 0 # minimum token count was 204 359
 
-    # Question 3
-    common_words = common_words(file)
-    meta_list = [(item[0], item[1]) for item in sorted(common_words.items(), key=lambda item: item[1], reverse=True)]
-    print("Top 50 words and counts, by frequency")
-    [print(f"{i[0]}, {i[1]}") for i in meta_list[:50]]
-    print()
+    trim_valid_outliers = False
+    trim_outliers = True
 
-    # Question 4
-    mega = c_subdomain_dict(file)
-    print("Sub domains and counts, alphabetical")
-    [print(f"{sub}, {mega[sub]}") for sub in sorted(mega.keys())]
+    t_dict = token_count_dict(json_path=file)
+    t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
+    t_outliers = token_outliers(json_path=file, low=trim_outliers, high=trim_valid_outliers)
 
-    exit()
-    # URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8
-    # TOKEN_COUNT_THRESHOLD = 0 # minimum token count was 204 359
-    # trim_valid_outliers = False
-    # t_dict = token_count_dict()
-    # t_dict_threshed = {pair[0]: pair[1] for pair in t_dict.items() if not pair[1] < TOKEN_COUNT_THRESHOLD}
-    # t_outliers = token_outliers(low=True, high=trim_valid_outliers)
-    #
-    # b_dict = block_lengths_dict()
-    # b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
-    # b_outliers = block_outliers(low=False, high=False)
-    #
-    #
-    #
-    # plt.ylabel("token length")
-    # plt.xlabel("block length")
-    # plt.scatter(b_dict.values(), t_dict.values())
-    # plt.savefig("token-block-scatter-before.jpg")
-    # plt.close()
-    # plt.xlabel("block length")
-    # plt.ylabel("count")
-    # plt.hist(b_dict.values())
-    # #plt.xscale("log")
-    # plt.savefig("token-block-box-before.jpg")
-    # plt.close()
-    #
-    # print("token lower threshold:", TOKEN_COUNT_THRESHOLD)
-    # print("block upper threshold:", URL_LENGTH_THRESHOLD)
-    # print("original total:", str(len(t_dict)))
-    # print("Optimals max and min are calculated by outlier equation quartile +/- 1.5 * iqr")
-    # print("Pre-filter optimal token min: ", compute_optimal_token_minimum(t_dict))
-    # print("Pre-filter optimal block max: ", compute_optimal_block_maximum(b_dict))
-    # print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
-    # print("removed via blocks thresh:", str(len(b_dict) - len(b_dict_threshed)))
-    #
-    # merge = {key: (b_dict[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
-    #                 if key not in b_outliers and key not in t_outliers}
-    # print("removed via outliers:", str(len(t_outliers) + len(b_outliers)))
-    # print("new total:", str(len(merge)))
-    #
-    #
-    # token_dict_no_outliers = {key: merge[key][1] for key in merge.keys()}
-    # block_dict_no_outliers = {key: merge[key][0] for key in merge.keys()}
-    # optimal_t = compute_optimal_token_minimum(token_dict_no_outliers)
-    # optimal_b = compute_optimal_block_maximum(block_dict_no_outliers)
-    # print("Post-filter optimal token min: ", optimal_t)
-    # print("Post-filter optimal block max: ", optimal_b)
-    # print("original token min: ", min(t_dict.values()))
-    # print("original block max: ", max(b_dict.values()))
-    # percent = 1 - len(merge)/len(t_dict)
-    # print("reduction percentage: ", percent)
-    #
-    # plt.xlabel("tokens")
-    # plt.boxplot([merge[key][1] for key in sorted(merge.keys())], vert=False)
-    # plt.savefig("token-boxplot.jpg")
-    # plt.close()
-    # plt.xlabel("blocks")
-    # plt.boxplot([merge[key][0] for key in sorted(merge.keys())],vert=False)
-    # plt.savefig("blocks-boxplot.jpg")
-    # plt.close()
-    # plt.ylabel("token length")
-    # plt.xlabel("block length")
-    # if trim_valid_outliers:
-    #     plt.title("w/o high token count outliers")
-    # x = [merge[key][1] for key in sorted(merge.keys())]
-    # y = [merge[key][0] for key in sorted(merge.keys())]
-    # plt.scatter(y, x)
-    # plt.savefig("token-block-scatter.jpg")
-    # plt.close()
-    # plt.xlabel("block length")
-    # plt.ylabel("count")
-    # plt.hist(y)
-    # #plt.xscale("log")
-    # plt.savefig("token-block-box.jpg")
-    # plt.close()
+    b_dict = block_lengths_dict(json_path=file)
+    b_dict_threshed = {pair[0]: pair[1] for pair in b_dict.items() if not pair[1] > URL_LENGTH_THRESHOLD}
+    b_outliers = block_outliers(json_path=file, low=trim_valid_outliers, high=trim_outliers)
+
+    plt.ylabel("token length")
+    plt.xlabel("block length")
+    plt.scatter(b_dict.values(), t_dict.values())
+    plt.savefig("token-block-scatter-before.jpg")
+    plt.close()
+    plt.xlabel("block length")
+    plt.ylabel("count")
+    plt.hist(b_dict.values())
+    #plt.xscale("log")
+    plt.savefig("token-block-box-before.jpg")
+    plt.close()
+
+    print("token lower threshold:", TOKEN_COUNT_THRESHOLD)
+    print("block upper threshold:", URL_LENGTH_THRESHOLD)
+    print("original total:", str(len(t_dict)))
+    print("Optimals max and min are calculated by outlier equation quartile +/- 1.5 * iqr")
+    print("Pre-filter optimal token min: ", compute_optimal_token_minimum(t_dict))
+    print("Pre-filter optimal block max: ", compute_optimal_block_maximum(b_dict))
+    print("removed via token thresh:", str(len(t_dict) - len(t_dict_threshed)))
+    print("removed via blocks thresh:", str(len(b_dict) - len(b_dict_threshed)))
+
+    merge = {key: (b_dict[key], t_dict_threshed[key]) for key in t_dict_threshed.keys()
+                    if key not in b_outliers and key not in t_outliers}
+    print("removed via outliers:", str(len(t_outliers) + len(b_outliers)))
+    print("new total:", str(len(merge)))
+
+
+    token_dict_no_outliers = {key: merge[key][1] for key in merge.keys()}
+    block_dict_no_outliers = {key: merge[key][0] for key in merge.keys()}
+    optimal_t = compute_optimal_token_minimum(token_dict_no_outliers)
+    optimal_b = compute_optimal_block_maximum(block_dict_no_outliers)
+    print("Post-filter optimal token min: ", optimal_t)
+    print("Post-filter optimal block max: ", optimal_b)
+    print("original token min: ", min(t_dict.values()))
+    print("original block max: ", max(b_dict.values()))
+    percent = 1 - len(merge)/len(t_dict)
+    print("reduction percentage: ", percent)
+
+    post_charts(merge)
