@@ -14,18 +14,14 @@ if __name__ == '__main__':
 	with open("Logs/data_17723.json", 'r') as f:
 		for line in f:
 			json_line = json.loads(line)
-			#json_object = json.dumps(json_line)
-
 			for url in json_line.keys():
 				if ".ics.uci.edu" in url: # "www.ics.uci.edu" not in url:
 					target_url.add(url)
-				else:
-					total_url.add(url)
+				total_url.add(url)
 
 	for url in target_url:
 		parse = urlparse(url)
 		data[parse.netloc].add(url)
-
 	tempD = collections.OrderedDict(sorted(data.items()))
 	with open("subdomain_count.txt", 'w+') as handle:
 		for key, value in tempD.items():
