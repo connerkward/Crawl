@@ -68,8 +68,8 @@ def access_jsonlines_urls(json_path=DEFAULT_JSON_PATH):
     """Returns list of urls. [url]"""
     token_dict_set = set()
     with open(json_path, 'rb') as f:
-        for line in json_lines.reader(f):
-            json_dict = line
+        for line in f:
+            json_dict = json.loads(line)
             for url in json_dict.keys():
                 token_dict_set.add(url)
     return token_dict_set
@@ -208,9 +208,7 @@ if __name__ == "__main__":
     file = "Logs/data_17723.json"
     # Question 1
     print("Number of 'Unique' Pages Found: ", len(access_jsonlines_urls(file)))
-    print(len(access_jsonlines_tokendicts(file)))
-    print(len(access_jsonlines(file)))
-    exit()
+
     # Question 2
     token_dict_list = access_jsonlines_tokendicts(file)
     highest_token_count = max([sum(token_dict.values()) for token_dict in token_dict_list])
@@ -225,7 +223,7 @@ if __name__ == "__main__":
     print()
 
     # Question 4
-    mega = c_subdomain_dict()
+    mega = subdomain_dict()
     print("Sub domains and counts, alphabetical")
     [print(f"{sub}, {mega[sub]}") for sub in sorted(mega.keys())]
 
