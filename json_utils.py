@@ -46,10 +46,11 @@ def archive_to_json(url, token_list, json_path=DEFAULT_JSON_PATH) -> dict:
 def access_jsonlines(json_path=DEFAULT_JSON_PATH) -> "list of token dicts":
     """Returns list of token dicts. {url{word:count}}"""
     big_dict = dict()
-    with open(json_path, 'rb') as f:
-        for line in json_lines.reader(f):
-            json_dict = line
+    with open(json_path, 'r') as f:
+        for line in f:
+            json_dict = json.loads(line)
             for url in json_dict.keys():
+
                 big_dict[url] = json_dict[url]
     return big_dict
 
@@ -63,15 +64,15 @@ def access_jsonlines_tokendicts(json_path=DEFAULT_JSON_PATH) -> "list of token d
                 token_dict_list.append(json_dict[url])
     return token_dict_list
 
-def access_jsonlines_urls(json_path=DEFAULT_JSON_PATH) -> "list of token dicts":
+def access_jsonlines_urls(json_path=DEFAULT_JSON_PATH):
     """Returns list of urls. [url]"""
-    token_dict_list = list()
+    token_dict_set = set()
     with open(json_path, 'rb') as f:
         for line in json_lines.reader(f):
             json_dict = line
             for url in json_dict.keys():
-                token_dict_list.append(url)
-    return token_dict_list
+                token_dict_set.add(url)
+    return token_dict_set
 
 def common_words(json_path=DEFAULT_JSON_PATH):
     mega_dict = dict()
@@ -191,23 +192,25 @@ def subdomain_dict(json_path=DEFAULT_JSON_PATH, domain=DEFAULT_DOMAIN_URL) -> di
                         subdomain_pages[dom] += 1
                     else:
                         subdomain_pages[dom] = 1
+    print(sum(subdomain_pages.values()))
     return subdomain_pages
 
 def c_subdomain_dict(file=DEFAULT_JSON_PATH):
     ics_urls = [url for url in access_jsonlines_urls(file) if ".ics.uci.edu" in url]
     mega = defaultdict(int)
-    for sub in {tldextract.extract(url).subdomain[:-4] for url in ics_urls}:
+    for sub in {tldextract.extract(url).subdomain for url in ics_urls}:
         for url in ics_urls:
-            if sub == tldextract.extract(url).subdomain[:-4]:
-                mega[sub] += 1
+            if sub[:-4] == tldextract.extract(url).subdomain[:-4]:
+                mega[url] += 1
     return mega
 
 if __name__ == "__main__":
     file = "Logs/data_17723.json"
     # Question 1
     print("Number of 'Unique' Pages Found: ", len(access_jsonlines_urls(file)))
-    print()
-
+    print(len(access_jsonlines_tokendicts(file)))
+    print(len(access_jsonlines(file)))
+    exit()
     # Question 2
     token_dict_list = access_jsonlines_tokendicts(file)
     highest_token_count = max([sum(token_dict.values()) for token_dict in token_dict_list])
@@ -222,10 +225,9 @@ if __name__ == "__main__":
     print()
 
     # Question 4
-    mega = subdomain_dict()
+    mega = c_subdomain_dict()
     print("Sub domains and counts, alphabetical")
     [print(f"{sub}, {mega[sub]}") for sub in sorted(mega.keys())]
-    print()
 
     exit()
     # URL_LENGTH_THRESHOLD = 20  # in blocks of url , usually around 3-5, 8

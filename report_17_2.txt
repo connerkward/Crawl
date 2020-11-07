@@ -1,0 +1,72 @@
+Number of 'Unique' Pages Found:  16599
+
+Longest page token count: 24261
+
+Top 50 words and counts, by frequency
+ics, 209322
+policies, 176007
+bren, 161389
+school, 161369
+academic, 157535
+research, 113155
+students, 97563
+computer, 97471
+contact, 97394
+program, 96737
+undergraduate, 96519
+honors, 96191
+student, 91779
+events, 81932
+uci, 81021
+step, 80155
+resources, 75035
+graduate, 64933
+donald, 64708
+faculty, 64567
+199, 64367
+support, 63569
+computing, 63276
+information, 49128
+sciences, 48758
+apply, 48689
+year, 48548
+irvine, 48544
+policy, 48413
+course, 48389
+plan, 48377
+change, 48237
+cs, 48234
+major, 48180
+advising, 44647
+home, 44220
+us, 33523
+laptop, 33183
+upcoming, 32835
+news, 32798
+social, 32399
+visit, 32366
+staff, 32362
+hall, 32351
+gift, 32309
+92697-3425, 32308
+use, 32294
+make, 32265
+life, 32253
+media, 32247
+
+Sub domains and counts, alphabetical
+checkmate.ics.uci.edu, 1
+elms.ics.uci.edu, 1
+graphics.ics.uci.edu, 8
+helpdesk.ics.uci.edu, 1
+hombao.ics.uci.edu, 1
+keys.ics.uci.edu, 1
+labbie.ics.uci.edu, 1
+statconsulting.ics.uci.edu, 1
+support.ics.uci.edu, 1
+ugradforms.ics.uci.edu, 2
+www.graphics.ics.uci.edu, 8
+www.ics.uci.edu, 626
+
+
+Process finished with exit code 0
